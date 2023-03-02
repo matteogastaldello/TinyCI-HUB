@@ -88,13 +88,13 @@ String getSubnetString(String ip, String out)
   Serial.println(out);
   return out;
 }
-int firstTCPMessage(int sockfd)
+int firstTCPMessage(int sockfd, const char *msg, int msg_len)
 {
   char buff[MAX];
-  int n;
   bzero(buff, sizeof(buff));
   // Serial.println("Enter the string : ");
-  sprintf(buff, "Test connection");
+  // sprintf(buff, "Test connectionasfasbf jasbfjashbfjhasbfjas");
+  strncpy(buff, msg, msg_len);
   write(sockfd, buff, sizeof(buff));
   // wait for ack
   bzero(buff, sizeof(buff));
@@ -146,7 +146,8 @@ String deviceDiscovery(int ip_start, int ip_end)
     {
       Serial.println("connected to the server...");
       // function for chat
-      int rm = firstTCPMessage(sockfd);
+      char msg[] = "Test Connection";
+      int rm = firstTCPMessage(sockfd, msg, sizeof(msg));
       // close the socket
       close(sockfd);
       if (rm == 0)
@@ -181,8 +182,12 @@ int openSocket(const char *ip)
   servaddr.sin_addr.s_addr = inet_addr(ip);
   servaddr.sin_port = htons(PORT);
 
+  int ra = connect_with_timeout(sockfd, (SA *)&servaddr, sizeof(servaddr), 2000);
+  Serial.print("Socket: ");
+  Serial.println(ra);
+  Serial.println(sockfd);
   // connect the client socket to server socket
-  return connect_with_timeout(sockfd, (SA *)&servaddr, sizeof(servaddr), 2000);
+  return ra;
 }
 int sendTCPMessage(const char *ip, const char *message, int message_len)
 {
@@ -196,7 +201,7 @@ int sendTCPMessage(const char *ip, const char *message, int message_len)
     char buff[MAX];
     bzero(buff, sizeof(buff));
     sprintf(buff, "Test Set");
-    //strcpy(buff, message);
+    // strcpy(buff, message);
     Serial.println(buff);
     write(sockfd, buff, sizeof(buff));
     // wait for ack
@@ -213,5 +218,49 @@ int sendTCPMessage(const char *ip, const char *message, int message_len)
       return 0; // success, ack received
     }
   }
+  close(sockfd);
   return -1;
+}
+
+int sendMessage(const char *ip, const char *message, int message_len)
+{
+  char outBuf[50];
+  int sockfd, connfd;
+  struct sockaddr_in servaddr, cli;
+
+  sockfd = socket(AF_INET, SOCK_STREAM, 0);
+  if (sockfd == -1)
+  {
+    Serial.println("socket creation failed...\n");
+    exit(0);
+    return -1;
+  }
+  bzero(&servaddr, sizeof(servaddr));
+  Serial.print(outBuf);
+  // assign IP, PORT
+  servaddr.sin_family = AF_INET;
+  servaddr.sin_addr.s_addr = inet_addr(ip);
+  servaddr.sin_port = htons(PORT);
+
+  // connect the client socket to server socket
+  int ra = connect_with_timeout(sockfd, (SA *)&servaddr, sizeof(servaddr), 2000);
+  if (ra >= 0)
+  {
+    Serial.println("connected to the server...");
+    // function for chat
+    Serial.print("Message is: ");
+    Serial.println(message);
+    int rm = firstTCPMessage(sockfd, message, message_len);
+    // close the socket
+    close(sockfd);
+    if (rm == 0)
+    {
+      Serial.println("Message Sent!");
+      Serial.println("closing socket...\n");
+      close(sockfd);
+    }
+    else
+      return -2; //impossible to send message
+  }
+  return 0;
 }

@@ -30,7 +30,7 @@ int nDevices = 0;
 WiFiClient wifiClient;
 PubSubClient mqttClient(wifiClient);
 
-char mqttServer[20] = "18.197.96.236";
+char mqttServer[50] = "mqtt.matteogastaldello.it";
 const char *ssid = "MspNet";
 const char *password = "mspmatteo";
 String MODE = "default";
@@ -45,7 +45,7 @@ void messageCallback(char *topic, byte *payload, unsigned int length)
 {
   Serial.print("Message arrived [");
   Serial.print(topic);
-  Serial.print("] ");
+  Serial.println("] ");
 
   char strPayload[length + 1];
   for (int i = 0; i < length; i++)
@@ -55,7 +55,6 @@ void messageCallback(char *topic, byte *payload, unsigned int length)
   strPayload[length] = '\0';
 
   StaticJsonDocument<1024> doc;
-  // memcpy(strPayload, payload, length);
   Serial.println(strPayload);
   deserializeJson(doc, strPayload);
   const char *mode = doc["mode"];
@@ -150,7 +149,7 @@ int setMode(String deviceName, char *params, int params_len)
       int times;
       for (times = 0; times < 3; times++)
       {
-        if (sendTCPMessage(devicesList[position].ip, params, params_len) >= 0){
+        if (sendMessage(devicesList[position].ip, params, params_len) >= 0){
           Serial.println("Message Sent");
           return 0;
         }

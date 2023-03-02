@@ -27,3 +27,4 @@ int connect_with_timeout(int sockfd, const struct sockaddr *addr, socklen_t addr
 String getSubnetString(String ip, String out);
 String deviceDiscovery(int ip_start, int ip_end);
 int sendTCPMessage(const char * ip, const char * message, int message_len);
+int sendMessage(const char *ip, const char *message, int message_len);
