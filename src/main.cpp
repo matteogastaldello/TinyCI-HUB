@@ -26,7 +26,6 @@ char outBuf[50];
 Device devicesList[MAX_DEVICES];
 int nDevices = 0;
 
-// DynamicJsonDocument doc(200);
 WiFiClient wifiClient;
 PubSubClient mqttClient(wifiClient);
 
@@ -48,12 +47,14 @@ void messageCallback(char *topic, byte *payload, unsigned int length)
   Serial.println("] ");
 
   char strPayload[length + 1];
+  char strPayload_backup[length + 1];
+
   for (int i = 0; i < length; i++)
   {
     strPayload[i] = (char)payload[i];
   }
   strPayload[length] = '\0';
-
+  strcpy(strPayload_backup, strPayload);
   StaticJsonDocument<1024> doc;
   Serial.println(strPayload);
   deserializeJson(doc, strPayload);
@@ -75,7 +76,8 @@ void messageCallback(char *topic, byte *payload, unsigned int length)
     mqttClient.unsubscribe("msp-outTopic");
     mqttClient.publish("msp-outTopic", "Entering Set Mode! - esp32");
     mqttClient.subscribe("msp-outTopic");
-    if (setMode(device, strPayload, length + 1) < 0)
+    Serial.println(strPayload_backup);
+    if (setMode(device, strPayload_backup, length + 1) < 0)
     {
       Serial.println("Impossible to set mode");
       mqttClient.unsubscribe("msp-outTopic");
@@ -150,7 +152,8 @@ int setMode(String deviceName, char *params, int params_len)
       for (times = 0; times < 3; times++)
       {
         if (sendMessage(devicesList[position].ip, params, params_len) >= 0){
-          Serial.println("Message Sent");
+          Serial.println("Message Sent: ");
+          Serial.println(params);
           return 0;
         }
       }
