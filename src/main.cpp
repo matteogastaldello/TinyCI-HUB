@@ -3,7 +3,12 @@
 #include <SPI.h>
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
-#include <tcpUtils.hpp>
+// include this file to include utils to connect to local websocket server.
+#include <utils/tcpUtils.hpp>
+// include this file to include utils to manage strings
+#include <utils/stringUtils.hpp>
+// import this file to include wifi SSID/password and mqtt server url/topic
+#include <configuration.h>
 
 #define SA struct sockaddr
 
@@ -29,69 +34,124 @@ int nDevices = 0;
 WiFiClient wifiClient;
 PubSubClient mqttClient(wifiClient);
 
-char mqttServer[50] = "mqtt.matteogastaldello.it";
-const char *ssid = "MspNet";
-const char *password = "mspmatteo";
-String MODE = "default";
-
 void messageCallback(char *topic, byte *payload, unsigned int length);
+void handleConfigurationCallback(char *topic, byte *payload, unsigned int length);
+void handleCommunicationCallback(char *topic, byte *payload, unsigned int length);
 void mqttReconnect();
 void discoveryMode(String deviceName);
+void checkConfiguration();
 int setMode(String deviceName, char *params, int params_len);
+
+boolean checkValidJson(DynamicJsonDocument doc, const String props[])
+{
+  for (int i = 0; i < props->length(); i++)
+  {
+    if (doc.containsKey(props[i]) == false)
+      return false;
+  }
+  return true;
+}
 
 // MQTT FUNCTIONS: message callback
 void messageCallback(char *topic, byte *payload, unsigned int length)
 {
-  Serial.print("Message arrived [");
+  if (strcmp(topic, mqttTopicConfig) == 0)
+  {
+    handleConfigurationCallback(topic, payload, length);
+    return;
+  }
+  else if (strcmp(topic, mqttTopicCommunication) == 0)
+  {
+    handleCommunicationCallback(topic, payload, length);
+    return;
+  }
+}
+
+void handleCommunicationCallback(char *topic, byte *payload, unsigned int length)
+{
+  Serial.print("Communication message arrived [");
   Serial.print(topic);
   Serial.println("] ");
-
   char strPayload[length + 1];
   char strPayload_backup[length + 1];
-
-  for (int i = 0; i < length; i++)
-  {
-    strPayload[i] = (char)payload[i];
-  }
-  strPayload[length] = '\0';
+  byteToString(payload, length, strPayload);
   strcpy(strPayload_backup, strPayload);
   StaticJsonDocument<1024> doc;
-  Serial.println(strPayload);
   deserializeJson(doc, strPayload);
-  const char *mode = doc["mode"];
-  const char *device = doc["device"];
-  // const char* message = doc["msg"].as<const char*>();
+  String validProps[] = {"mode", "device"};
+  // check if json is valid for communication topic
+  if (checkValidJson(doc, validProps))
+  {
+    const char *mode = doc["mode"];
+    const char *device = doc["device"];
 
-  if (strcmp(mode, "discovery") == 0)
-  {
-    Serial.println("Discovery Mode...");
-    mqttClient.unsubscribe("msp-outTopic");
-    mqttClient.publish("msp-outTopic", "Entering Discovery Mode! - esp32");
-    discoveryMode(device);
-    mqttClient.subscribe("msp-outTopic");
-  }
-  else if (strcmp(mode, "set") == 0)
-  {
-    Serial.println("Set Mode...");
-    mqttClient.unsubscribe("msp-outTopic");
-    mqttClient.publish("msp-outTopic", "Entering Set Mode! - esp32");
-    mqttClient.subscribe("msp-outTopic");
-    Serial.println(strPayload_backup);
-    if (setMode(device, strPayload_backup, length + 1) < 0)
+    if (strcmp(mode, "discovery") == 0)
     {
-      Serial.println("Impossible to set mode");
-      mqttClient.unsubscribe("msp-outTopic");
-      mqttClient.publish("msp-outTopic", "Impossible to set Mode - esp32");
-      mqttClient.subscribe("msp-outTopic");
+      Serial.println("Discovery Mode...");
+      mqttClient.unsubscribe(mqttTopicCommunication);
+      mqttClient.publish(mqttTopicCommunication, "Entering Discovery Mode! - esp32");
+      discoveryMode(device);
+      mqttClient.subscribe(mqttTopicCommunication);
+    }
+    else if (strcmp(mode, "set") == 0)
+    {
+      Serial.println("Set Mode...");
+      mqttClient.unsubscribe(mqttTopicCommunication);
+      mqttClient.publish(mqttTopicCommunication, "Entering Set Mode! - esp32");
+      mqttClient.subscribe(mqttTopicCommunication);
+      Serial.println(strPayload_backup);
+      Serial.println(strPayload);
+      if (setMode(device, strPayload_backup, length + 1) < 0)
+      {
+        Serial.println("Impossible to set mode");
+        mqttClient.unsubscribe(mqttTopicCommunication);
+        mqttClient.publish(mqttTopicCommunication, "Impossible to set Mode - esp32");
+        mqttClient.subscribe(mqttTopicCommunication);
+      }
+    }
+    else
+    {
+      Serial.println("No msg-mode selected!");
+      Serial.println(strPayload);
     }
   }
   else
   {
-    Serial.println("No msg-mode selected!");
-    Serial.println(strPayload);
+    Serial.println("Json not valid for communication.");
   }
-  // Serial.println("name = " + String(name) + "\ncar = " + String(car));
 }
+void handleConfigurationCallback(char *topic, byte *payload, unsigned int length)
+{
+  Serial.print("Configuration Message arrived [");
+  Serial.print(topic);
+  Serial.println("] ");
+  // prepare payload to deserialization. byte to string
+  char strPayload[length + 1];
+  char strPayload_backup[length + 1];
+  byteToString(payload, length, strPayload);
+  strcpy(strPayload_backup, strPayload);
+  StaticJsonDocument<1024> doc;
+  Serial.println(strPayload);
+  deserializeJson(doc, strPayload);
+  String validProps[] = {"id", "status"};
+  if (checkValidJson(doc, validProps))
+  {
+    const char *deviceId = doc["id"];
+    const char *status = doc["status"];
+
+    if (strcmp(deviceId, WiFi.macAddress().c_str()) == 0)
+    {
+      Serial.println("Device registered");
+      mqttClient.unsubscribe(mqttTopicConfig);
+      mqttClient.subscribe(mqttTopicCommunication);
+    }
+  }
+  else
+  {
+    Serial.println("Json not valid for configuration.");
+  }
+}
+
 // MQTT FUNCTIONS: message reconnect on down
 void mqttReconnect()
 {
@@ -104,11 +164,11 @@ void mqttReconnect()
     {
       Serial.println("connected");
       // Once connected, publish an announcement...
-      mqttClient.publish("msp-outTopic", "hello world");
+      // mqttClient.publish(mqttTopicCommunication, "hello world");
       Serial.print("State: ");
       Serial.println(mqttClient.state());
       // ... and resubscribe
-      mqttClient.subscribe("msp-outTopic");
+      mqttClient.subscribe(mqttTopicCommunication);
     }
     else
     {
@@ -142,7 +202,8 @@ int setMode(String deviceName, char *params, int params_len)
   int position;
   Serial.println(params_len);
   // find the position of "deviceName", if is not found position is "nDevices"
-  for (position = 0; position < nDevices && devicesList[position].deviceName != deviceName; position++);
+  for (position = 0; position < nDevices && devicesList[position].deviceName != deviceName; position++)
+    ;
   if (position != nDevices)
   {
     if (params_len != 0)
@@ -151,7 +212,8 @@ int setMode(String deviceName, char *params, int params_len)
       int times;
       for (times = 0; times < 3; times++)
       {
-        if (sendMessage(devicesList[position].ip, params, params_len) >= 0){
+        if (sendMessage(devicesList[position].ip, params, params_len) >= 0)
+        {
           Serial.println("Message Sent: ");
           Serial.println(params);
           return 0;
@@ -161,6 +223,19 @@ int setMode(String deviceName, char *params, int params_len)
     }
   }
   return -1; // device not found
+}
+
+void checkConfiguration()
+{
+  Serial.println("checking configuration...");
+  StaticJsonDocument<256> jsonResponse;
+  jsonResponse["device-name"] = deviceName;
+  jsonResponse["id"] = WiFi.macAddress();
+  char stringJson[500];
+  serializeJson(jsonResponse, stringJson, sizeof(stringJson));
+  Serial.println(stringJson);
+  mqttClient.publish(mqttTopicConfig, stringJson);
+  mqttClient.subscribe(mqttTopicConfig);
 }
 
 void setup()
@@ -174,7 +249,6 @@ void setup()
   Serial.println(ssid);
 
   WiFi.begin(ssid, password);
-
   while (WiFi.status() != WL_CONNECTED)
   {
     delay(500);
@@ -188,18 +262,20 @@ void setup()
 
   mqttClient.setServer(mqttServer, 1883);
   mqttClient.setCallback(messageCallback);
-  delay(1500);
+
+  delay(500);
+  while (mqttClient.state() != MQTT_CONNECTED)
+  {
+    mqttReconnect();
+  }
+  checkConfiguration();
 }
 
 void loop()
 {
   if (mqttClient.state() != MQTT_CONNECTED)
   {
-    // Serial.print("State: ");
-    // Serial.println(mqttClient.state());
     mqttReconnect();
   }
-  // Serial.print("State: ");
-  // Serial.println(mqttClient.state());
   mqttClient.loop();
 }

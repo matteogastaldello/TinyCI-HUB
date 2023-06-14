@@ -1,6 +1,6 @@
 #include <Arduino.h>
-#include <tcpUtils.hpp>
-
+#include <utils/tcpUtils.hpp>
+//function used to connect to a server specified at addr
 int connect_with_timeout(int sockfd, const struct sockaddr *addr, socklen_t addrlen, unsigned int timeout_ms)
 {
   int rc = 0;
@@ -31,7 +31,7 @@ int connect_with_timeout(int sockfd, const struct sockaddr *addr, socklen_t addr
           break;
         }
         struct timespec deadline = {.tv_sec = now.tv_sec,
-                                    .tv_nsec = now.tv_nsec + timeout_ms * 1000000l};
+                                    .tv_nsec = now.tv_nsec + (long)timeout_ms * 1000000l};
         // Wait for the connection to complete.
         do
         {
@@ -79,21 +79,24 @@ int connect_with_timeout(int sockfd, const struct sockaddr *addr, socklen_t addr
   // Success
   return rc;
 }
+
+//Extract subnet from a complete ip address eg. getSubnetString("192.168.1.12") returns "192.168.1"
 String getSubnetString(String ip, String out)
-{
-  int i;
-  for (i = ip.length() - 1; i > 0 && ip[i] != '.'; i--)
-    ;
-  out = ip.substring(0, i);
+{  
+  // int i;
+  // for (i = ip.length() - 1; i > 0 && ip[i] != '.'; i--)
+  //   ;
+
+  out = ip.substring(0, ip.lastIndexOf("."));
   Serial.println(out);
   return out;
 }
+
+//function used to simulate an handshake between the retrieved device and the ESP
 int firstTCPMessage(int sockfd, const char *msg, int msg_len)
 {
   char buff[MAX];
   bzero(buff, sizeof(buff));
-  // Serial.println("Enter the string : ");
-  // sprintf(buff, "Test connectionasfasbf jasbfjashbfjhasbfjas");
   strncpy(buff, msg, msg_len);
   write(sockfd, buff, sizeof(buff));
   // wait for ack
@@ -113,6 +116,9 @@ int firstTCPMessage(int sockfd, const char *msg, int msg_len)
   }
   return -1;
 }
+
+//Discovery function used to poll the network to find a device that is listening.
+//This function make connection request to all ip from ip_start to ip_end.
 String deviceDiscovery(int ip_start, int ip_end)
 {
   char outBuf[50];
@@ -260,7 +266,7 @@ int sendMessage(const char *ip, const char *message, int message_len)
       close(sockfd);
     }
     else
-      return -2; //impossible to send message
+      return -2; // impossible to send message
   }
   return 0;
 }
