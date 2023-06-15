@@ -1,5 +1,9 @@
 #include <Arduino.h>
 #include <utils/tcpUtils.hpp>
+#include <utils/stringUtils.hpp>
+
+#define HANDSHAKE_ACK  "HANDSHAKE_ACK"
+
 //function used to connect to a server specified at addr
 int connect_with_timeout(int sockfd, const struct sockaddr *addr, socklen_t addrlen, unsigned int timeout_ms)
 {
@@ -79,25 +83,12 @@ int connect_with_timeout(int sockfd, const struct sockaddr *addr, socklen_t addr
   // Success
   return rc;
 }
-
-//Extract subnet from a complete ip address eg. getSubnetString("192.168.1.12") returns "192.168.1"
-String getSubnetString(String ip, String out)
-{  
-  // int i;
-  // for (i = ip.length() - 1; i > 0 && ip[i] != '.'; i--)
-  //   ;
-
-  out = ip.substring(0, ip.lastIndexOf("."));
-  Serial.println(out);
-  return out;
-}
-
 //function used to simulate an handshake between the retrieved device and the ESP
-int firstTCPMessage(int sockfd, const char *msg, int msg_len)
+int sendMessage(int sockfd, const char * msg, int msgSize)
 {
   char buff[MAX];
   bzero(buff, sizeof(buff));
-  strncpy(buff, msg, msg_len);
+  strncpy(buff, msg, msgSize);
   write(sockfd, buff, sizeof(buff));
   // wait for ack
   bzero(buff, sizeof(buff));
@@ -107,7 +98,7 @@ int firstTCPMessage(int sockfd, const char *msg, int msg_len)
   sprintf(message, "ACK Message : %s", buff);
   Serial.println(message);
 
-  if ((strcmp(buff, "MSP432_ACK")) == 0)
+  if ((strcmp(buff, HANDSHAKE_ACK)) == 0)
   {
     Serial.println("Device Sent ACK!");
     // sprintf(buff, "exit");
@@ -116,7 +107,6 @@ int firstTCPMessage(int sockfd, const char *msg, int msg_len)
   }
   return -1;
 }
-
 //Discovery function used to poll the network to find a device that is listening.
 //This function make connection request to all ip from ip_start to ip_end.
 String deviceDiscovery(int ip_start, int ip_end)
@@ -152,8 +142,8 @@ String deviceDiscovery(int ip_start, int ip_end)
     {
       Serial.println("connected to the server...");
       // function for chat
-      char msg[] = "Test Connection";
-      int rm = firstTCPMessage(sockfd, msg, sizeof(msg));
+      const char msg[] = "HANDSHAKE_REQ";
+      int rm = sendMessage(sockfd, msg, sizeof(msg));
       // close the socket
       close(sockfd);
       if (rm == 0)
@@ -171,13 +161,14 @@ String deviceDiscovery(int ip_start, int ip_end)
   }
   return "error";
 }
-int openSocket(const char *ip)
+//Open a socket at the specified ip
+int openSocket(const char *ip, int * sockfd)
 {
-  int sockfd, connfd;
+  int connfd;
   struct sockaddr_in servaddr, cli;
   // socket create and verification
-  sockfd = socket(AF_INET, SOCK_STREAM, 0);
-  if (sockfd == -1)
+  *sockfd = socket(AF_INET, SOCK_STREAM, 0);
+  if (*sockfd == -1)
   {
     Serial.println("socket creation failed...\n");
     return -3;
@@ -188,75 +179,46 @@ int openSocket(const char *ip)
   servaddr.sin_addr.s_addr = inet_addr(ip);
   servaddr.sin_port = htons(PORT);
 
-  int ra = connect_with_timeout(sockfd, (SA *)&servaddr, sizeof(servaddr), 2000);
+  int ra = connect_with_timeout(*sockfd, (SA *)&servaddr, sizeof(servaddr), 2000);
   Serial.print("Socket: ");
   Serial.println(ra);
-  Serial.println(sockfd);
+  Serial.println(*sockfd);
   // connect the client socket to server socket
   return ra;
 }
-int sendTCPMessage(const char *ip, const char *message, int message_len)
-{
-  if (message_len >= MAX)
-    return -2;
-
-  // open socket
-  int sockfd = openSocket(ip);
-  if (sockfd >= 0)
-  {
-    char buff[MAX];
-    bzero(buff, sizeof(buff));
-    sprintf(buff, "Test Set");
-    // strcpy(buff, message);
-    Serial.println(buff);
-    write(sockfd, buff, sizeof(buff));
-    // wait for ack
-    bzero(buff, sizeof(buff));
-    Serial.println("Waiting ACK from Server...");
-    read(sockfd, buff, sizeof(buff));
-    char rcv_message[MAX];
-    sprintf(rcv_message, "ACK Message : %s", buff);
-    Serial.println(rcv_message);
-
-    if ((strcmp(buff, "MSP432_ACK")) == 0)
-    {
-      Serial.println("Device Sent ACK!");
-      return 0; // success, ack received
-    }
-  }
-  close(sockfd);
-  return -1;
-}
-
+//the result is equals to "int sendMessage(int sockfd, const char * msg, int msgSize)" but you can specify ip instead of sockfd
+//note: the sockfd is created in the function
 int sendMessage(const char *ip, const char *message, int message_len)
 {
-  char outBuf[50];
-  int sockfd, connfd;
-  struct sockaddr_in servaddr, cli;
+  // char outBuf[50];
+  // int sockfd, connfd;
+  // struct sockaddr_in servaddr, cli;
 
-  sockfd = socket(AF_INET, SOCK_STREAM, 0);
-  if (sockfd == -1)
-  {
-    Serial.println("socket creation failed...\n");
-    exit(0);
-    return -1;
-  }
-  bzero(&servaddr, sizeof(servaddr));
-  Serial.print(outBuf);
-  // assign IP, PORT
-  servaddr.sin_family = AF_INET;
-  servaddr.sin_addr.s_addr = inet_addr(ip);
-  servaddr.sin_port = htons(PORT);
+  // sockfd = socket(AF_INET, SOCK_STREAM, 0);
+  // if (sockfd == -1)
+  // {
+  //   Serial.println("socket creation failed...\n");
+  //   exit(0);
+  //   return -1;
+  // }
+  // bzero(&servaddr, sizeof(servaddr));
+  // Serial.print(outBuf);
+  // // assign IP, PORT
+  // servaddr.sin_family = AF_INET;
+  // servaddr.sin_addr.s_addr = inet_addr(ip);
+  // servaddr.sin_port = htons(PORT);
 
-  // connect the client socket to server socket
-  int ra = connect_with_timeout(sockfd, (SA *)&servaddr, sizeof(servaddr), 2000);
+  // // connect the client socket to server socket
+  // int ra = connect_with_timeout(sockfd, (SA *)&servaddr, sizeof(servaddr), 2000);
+  int sockfd;
+  int ra = openSocket(ip, &sockfd);
   if (ra >= 0)
   {
     Serial.println("connected to the server...");
     // function for chat
     Serial.print("Message is: ");
     Serial.println(message);
-    int rm = firstTCPMessage(sockfd, message, message_len);
+    int rm = sendMessage(sockfd, message, message_len);
     // close the socket
     close(sockfd);
     if (rm == 0)

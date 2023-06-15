@@ -22,9 +22,8 @@
 #define SA struct sockaddr
 
 
-int firstTCPMessage(int sockfd);
 int connect_with_timeout(int sockfd, const struct sockaddr *addr, socklen_t addrlen, unsigned int timeout_ms);
-String getSubnetString(String ip, String out);
+int sendMessage(int sockfd, const char * msg, int msgSize);
 String deviceDiscovery(int ip_start, int ip_end);
-int sendTCPMessage(const char * ip, const char * message, int message_len);
+int openSocket(const char *ip, int * sockfd);
 int sendMessage(const char *ip, const char *message, int message_len);
