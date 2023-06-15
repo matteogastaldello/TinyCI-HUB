@@ -42,16 +42,18 @@ void discoveryMode(String deviceName);
 void checkConfiguration();
 int setMode(String deviceName, char *params, int params_len);
 
-boolean checkValidJson(DynamicJsonDocument doc, const String props[])
+boolean checkValidJson(JsonDocument& doc, const String props[], int props_len)
 {
-  for (int i = 0; i < props->length(); i++)
+  Serial.println("Checking json...");
+  serializeJson(doc, Serial);
+  for (int i = 0; i < props_len; i++)
   {
+    Serial.println(props[i]);
     if (doc.containsKey(props[i]) == false)
       return false;
   }
   return true;
 }
-
 // MQTT FUNCTIONS: message callback
 void messageCallback(char *topic, byte *payload, unsigned int length)
 {
@@ -66,7 +68,6 @@ void messageCallback(char *topic, byte *payload, unsigned int length)
     return;
   }
 }
-
 void handleCommunicationCallback(char *topic, byte *payload, unsigned int length)
 {
   Serial.print("Communication message arrived [");
@@ -79,8 +80,9 @@ void handleCommunicationCallback(char *topic, byte *payload, unsigned int length
   StaticJsonDocument<1024> doc;
   deserializeJson(doc, strPayload);
   String validProps[] = {"mode", "device"};
+  Serial.println(strPayload_backup);
   // check if json is valid for communication topic
-  if (checkValidJson(doc, validProps))
+  if (checkValidJson(doc, validProps, 2))
   {
     const char *mode = doc["mode"];
     const char *device = doc["device"];
@@ -134,7 +136,7 @@ void handleConfigurationCallback(char *topic, byte *payload, unsigned int length
   Serial.println(strPayload);
   deserializeJson(doc, strPayload);
   String validProps[] = {"id", "status"};
-  if (checkValidJson(doc, validProps))
+  if (checkValidJson(doc, validProps, 2))
   {
     const char *deviceId = doc["id"];
     const char *status = doc["status"];
@@ -151,7 +153,6 @@ void handleConfigurationCallback(char *topic, byte *payload, unsigned int length
     Serial.println("Json not valid for configuration.");
   }
 }
-
 // MQTT FUNCTIONS: message reconnect on down
 void mqttReconnect()
 {
