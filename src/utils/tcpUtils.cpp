@@ -2,7 +2,6 @@
 #include <utils/tcpUtils.hpp>
 #include <utils/stringUtils.hpp>
 
-#define HANDSHAKE_ACK  "HANDSHAKE_ACK"
 
 //function used to connect to a server specified at addr
 int connect_with_timeout(int sockfd, const struct sockaddr *addr, socklen_t addrlen, unsigned int timeout_ms)

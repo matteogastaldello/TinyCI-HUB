@@ -20,6 +20,7 @@
 #define MAX_IPLEN 16
 #define PORT 8080
 #define SA struct sockaddr
+#define HANDSHAKE_ACK  "HANDSHAKE_ACK"
 
 
 int connect_with_timeout(int sockfd, const struct sockaddr *addr, socklen_t addrlen, unsigned int timeout_ms);
