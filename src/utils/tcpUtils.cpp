@@ -2,8 +2,7 @@
 #include <utils/tcpUtils.hpp>
 #include <utils/stringUtils.hpp>
 
-
-//function used to connect to a server specified at addr
+// function used to connect to a server specified at addr
 int connect_with_timeout(int sockfd, const struct sockaddr *addr, socklen_t addrlen, unsigned int timeout_ms)
 {
   int rc = 0;
@@ -82,8 +81,8 @@ int connect_with_timeout(int sockfd, const struct sockaddr *addr, socklen_t addr
   // Success
   return rc;
 }
-//function used to simulate an handshake between the retrieved device and the ESP
-int sendMessage(int sockfd, const char * msg, int msgSize)
+// function used to simulate an handshake between the retrieved device and the ESP
+int sendACKMessage(int sockfd, const char *msg, int msgSize)
 {
   char buff[MAX];
   bzero(buff, sizeof(buff));
@@ -106,62 +105,26 @@ int sendMessage(int sockfd, const char * msg, int msgSize)
   }
   return -1;
 }
-//Discovery function used to poll the network to find a device that is listening.
-//This function make connection request to all ip from ip_start to ip_end.
-String deviceDiscovery(int ip_start, int ip_end)
+// function used to simulate an handshake between the retrieved device and the ESP
+int sendAndReceiveMessage(int sockfd, const char *msg, int msgSize, char * responseBuf, int responseLen)
 {
-  char outBuf[50];
-  int sockfd, connfd;
-  struct sockaddr_in servaddr, cli;
-  String subIP;
-  subIP = getSubnetString(WiFi.localIP().toString(), subIP);
-
-  for (int i = ip_start; i < ip_end; i++)
-  {
-    // socket create and verification
-    sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    if (sockfd == -1)
-    {
-      Serial.println("socket creation failed...\n");
-      exit(0);
-    }
-    bzero(&servaddr, sizeof(servaddr));
-    char ip[MAX_IPLEN] = "";
-    sprintf(ip, "%s.%d", subIP, i);
-    sprintf(outBuf, "ip: %s\t", ip);
-    Serial.print(outBuf);
-    // assign IP, PORT
-    servaddr.sin_family = AF_INET;
-    servaddr.sin_addr.s_addr = inet_addr(ip);
-    servaddr.sin_port = htons(PORT);
-
-    // connect the client socket to server socket
-    int ra = connect_with_timeout(sockfd, (SA *)&servaddr, sizeof(servaddr), 2000);
-    if (ra >= 0)
-    {
-      Serial.println("connected to the server...");
-      // function for chat
-      const char msg[] = "HANDSHAKE_REQ";
-      int rm = sendMessage(sockfd, msg, sizeof(msg));
-      // close the socket
-      close(sockfd);
-      if (rm == 0)
-      {
-        return String(ip);
-      }
-    }
-    else
-    {
-      sprintf(outBuf, "Addr not working... %d", ra);
-      Serial.println(outBuf);
-    }
-    Serial.println("closing socket...\n");
-    close(sockfd);
-  }
-  return "error";
+  char buff[MAX];
+  write(sockfd, msg, msgSize);
+  Serial.print("message sent: ");
+  Serial.println(msg);
+  // wait for ack
+  bzero(buff, sizeof(buff));
+  Serial.println("Waiting Response from Server...");
+  read(sockfd, buff, sizeof(buff));
+  char message[MAX];
+  sprintf(message, "Message : %s", buff);
+  Serial.println(message);
+  strcpy(responseBuf, buff);
+  Serial.println("Message received from server!");
+  return 0; // success, ack received
 }
-//Open a socket at the specified ip
-int openSocket(const char *ip, int * sockfd)
+// Open a socket at the specified ip
+int openSocket(const char *ip, int *sockfd)
 {
   int connfd;
   struct sockaddr_in servaddr, cli;
@@ -185,30 +148,10 @@ int openSocket(const char *ip, int * sockfd)
   // connect the client socket to server socket
   return ra;
 }
-//the result is equals to "int sendMessage(int sockfd, const char * msg, int msgSize)" but you can specify ip instead of sockfd
-//note: the sockfd is created in the function
-int sendMessage(const char *ip, const char *message, int message_len)
+// the result is equals to "int sendMessage(int sockfd, const char * msg, int msgSize)" but you can specify ip instead of sockfd
+// note: the sockfd is created in the function
+int sendAndReceiveMessage(const char *ip, const char *message, int message_len, char * responseBuf, int responseLen)
 {
-  // char outBuf[50];
-  // int sockfd, connfd;
-  // struct sockaddr_in servaddr, cli;
-
-  // sockfd = socket(AF_INET, SOCK_STREAM, 0);
-  // if (sockfd == -1)
-  // {
-  //   Serial.println("socket creation failed...\n");
-  //   exit(0);
-  //   return -1;
-  // }
-  // bzero(&servaddr, sizeof(servaddr));
-  // Serial.print(outBuf);
-  // // assign IP, PORT
-  // servaddr.sin_family = AF_INET;
-  // servaddr.sin_addr.s_addr = inet_addr(ip);
-  // servaddr.sin_port = htons(PORT);
-
-  // // connect the client socket to server socket
-  // int ra = connect_with_timeout(sockfd, (SA *)&servaddr, sizeof(servaddr), 2000);
   int sockfd;
   int ra = openSocket(ip, &sockfd);
   if (ra >= 0)
@@ -217,7 +160,7 @@ int sendMessage(const char *ip, const char *message, int message_len)
     // function for chat
     Serial.print("Message is: ");
     Serial.println(message);
-    int rm = sendMessage(sockfd, message, message_len);
+    int rm = sendAndReceiveMessage(sockfd, message, message_len, responseBuf, responseLen);
     // close the socket
     close(sockfd);
     if (rm == 0)

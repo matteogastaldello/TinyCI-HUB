@@ -15,7 +15,7 @@
 #include <WiFi.h>
 
 
-#define MAX 80
+#define MAX 500
 #define MAX_DEVICES 5
 #define MAX_IPLEN 16
 #define PORT 8080
@@ -24,7 +24,7 @@
 
 
 int connect_with_timeout(int sockfd, const struct sockaddr *addr, socklen_t addrlen, unsigned int timeout_ms);
-int sendMessage(int sockfd, const char * msg, int msgSize);
-String deviceDiscovery(int ip_start, int ip_end);
+int sendAndReceiveMessage(int sockfd, const char * msg, int msgSize, char * responseBuf, int responseLen);
 int openSocket(const char *ip, int * sockfd);
-int sendMessage(const char *ip, const char *message, int message_len);
+int sendAndReceiveMessage(const char *ip, const char *message, int message_len, char * responseBuf, int responseLen);
+int sendACKMessage(int sockfd, const char *msg, int msgSize);
