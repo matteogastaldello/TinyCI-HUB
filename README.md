@@ -143,3 +143,10 @@ String deviceDiscovery(int ip_start, int ip_end, JsonDocument &doc, char *respon
 ```
 
 The project also contains custom made libraries to handle web socket communication and string manipulation. The functions are documented in the relative files (`tcpUtils.cpp` and `stringUtils.cpp` in `src/utils/`)
+
+| Function | Description |
+|   ---    |     ---     |
+|`int connect_with_timeout(int sockfd, const struct sockaddr *addr, socklen_t addrlen, unsigned int timeout_ms)`| Function used to connect to a server specified at addr. The operation abort after the time specified in timeout_ms |
+|`int sendAndReceiveMessage(int sockfd, const char *msg, int msgSize, char * responseBuf, int responseLen)`| Function used to communicate with a server by websocket. The response is set in responseBuf|
+|`sendAndReceiveMessage(const char *ip, const char *message, int message_len, char * responseBuf, int responseLen)`| the result is equals to "int sendAndReceiveMessage" but you can specify ip instead of sockfd. note: the sockfd is created in the function |
+
