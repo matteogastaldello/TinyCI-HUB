@@ -55,6 +55,8 @@ const char *password = "mspmatteo";
 
 Other parts of "configuration.h" refers to MQTT server configuration. This lines can be edited only if also the configuration of the web platform are edited accordingly!
 
+After setting these variables you only need to compile the project with Platform.IO and upload to the board. If you want to monitor the status of the device you can connect it to a Serial Monitor (BaudRate '9600', Bits '8', Parity 'None', Stop Bits '1')
+
 ## Code Highlights 
 
 | Function | Description |
