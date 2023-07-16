@@ -2,7 +2,7 @@
 #include <utils/tcpUtils.hpp>
 #include <utils/stringUtils.hpp>
 
-// function used to connect to a server specified at addr
+// function used to connect to a server specified at addr. The operation abort after the time specified in timeout_ms
 int connect_with_timeout(int sockfd, const struct sockaddr *addr, socklen_t addrlen, unsigned int timeout_ms)
 {
   int rc = 0;
@@ -105,7 +105,7 @@ int sendACKMessage(int sockfd, const char *msg, int msgSize)
   }
   return -1;
 }
-// function used to simulate an handshake between the retrieved device and the ESP
+// function used to communicate with a server by websocket. The response is set in responseBuf
 int sendAndReceiveMessage(int sockfd, const char *msg, int msgSize, char * responseBuf, int responseLen)
 {
   char buff[MAX];
@@ -148,7 +148,7 @@ int openSocket(const char *ip, int *sockfd)
   // connect the client socket to server socket
   return ra;
 }
-// the result is equals to "int sendMessage(int sockfd, const char * msg, int msgSize)" but you can specify ip instead of sockfd
+// the result is equals to "int sendAndReceiveMessage" but you can specify ip instead of sockfd
 // note: the sockfd is created in the function
 int sendAndReceiveMessage(const char *ip, const char *message, int message_len, char * responseBuf, int responseLen)
 {

@@ -1,6 +1,5 @@
 #include <Arduino.h>
 // MQTT Libraries
-#include <SPI.h>
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
 // include this file to include utils to connect to local websocket server.
@@ -206,7 +205,6 @@ void mqttReconnect()
 // TCP DISCOVERY FUNCTION
 void discoveryMode(String deviceName, JsonDocument &doc, char *responseBuf, int responseLen)
 {
-  char ip[MAX_IPLEN];
   String str_out = deviceDiscovery(100, 105, doc, responseBuf, responseLen);
   Serial.println(str_out);
   deserializeJson(doc, str_out);
