@@ -150,3 +150,12 @@ The project also contains custom made libraries to handle web socket communicati
 |`int sendAndReceiveMessage(int sockfd, const char *msg, int msgSize, char * responseBuf, int responseLen)`| Function used to communicate with a server by websocket. The response is set in responseBuf|
 |`sendAndReceiveMessage(const char *ip, const char *message, int message_len, char * responseBuf, int responseLen)`| the result is equals to "int sendAndReceiveMessage" but you can specify ip instead of sockfd. note: the sockfd is created in the function |
 
+## Authors
+Gastaldello Matteo\
+Natali Federico\
+Sabella Matteo 
+## Acknowledgments
+
+<a href="https://www.unitn.it/">
+  <img src="https://github.com/matteogastaldello/msp432-endpoint/assets/95225168/032831a5-5a29-4f50-9f4e-f5689dd6f54a" width="300px">
+</a>
