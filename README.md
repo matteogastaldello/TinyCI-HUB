@@ -57,6 +57,16 @@ Other parts of "configuration.h" refers to MQTT server configuration. This lines
 
 ## Code Highlights 
 
+| Function | Description |
+|   ---    |     ---     |
+|`void messageCallback(char *topic, byte *payload, unsigned int length)`| Handle all MQTT payload that are published and redirect the request to the appropriate handler (`void handleConfigurationCallback`, `void handleCommunicationCallback`) |
+|`void handleConfigurationCallback(char *topic, byte *payload, unsigned int length)`| Handle response when a payload is published on the defined MQTT configuration topic |
+|`void handleCommunicationCallback(char *topic, byte *payload, unsigned int length)` | Handle response when a payload is published on the defined MQTT configuration topic |
+|`int setMode(String deviceName, char *params, int params_len)`| If a json is published in the communication topic with `{"mode": "set"}` the hub redirect the request to `deviceName` (if the device was previously configured) that handle the request. |
+|`int getMode(String deviceName, char *responseBuf, int responseLen)`| If a json is published in the communication topic with `{"mode": "get"}` the hub redirect the request to `deviceName` (if the device was previously configured) that handle the request (eg. reading sensonrs) and sends back to the response to the hub that immediately share the data with the web platform |
+|`String deviceDiscovery(int ip_start, int ip_end, JsonDocument &doc, char *responseBuf, int responseLen)`| See code below. |
+|`void discoveryMode(String deviceName, JsonDocument &doc, char *responseBuf, int responseLen)` | See code below |
+
 - **Discovery Mode**: the code provided below is used to scan the entire ip subnet to auto register edge devices in to the hub to communicate with them later.
 
 ```C++
@@ -102,7 +112,7 @@ String deviceDiscovery(int ip_start, int ip_end, JsonDocument &doc, char *respon
     servaddr.sin_addr.s_addr = inet_addr(ip);
     servaddr.sin_port = htons(PORT);
 
-    // connect the client socket to server socket
+    // connect the client socket to server socket in non blocking mode with timeout
     int ra = connect_with_timeout(sockfd, (SA *)&servaddr, sizeof(servaddr), 2000);
     if (ra >= 0)
     {
@@ -132,4 +142,4 @@ String deviceDiscovery(int ip_start, int ip_end, JsonDocument &doc, char *respon
 }
 ```
 
-
+The project also contains custom made libraries to handle web socket communication and string manipulation. The functions are documented in the relative files (`tcpUtils.cpp` and `stringUtils.cpp` in `src/utils/`)
