@@ -1,6 +1,6 @@
-# ESP32-HomeHub
+# TinyCI Hub
 
-"TIC" Hub is middleware hub for IoT is a transformative solution that bridges the gap between IoT devices and web platforms. By efficiently collecting data from sensors on IoT devices and transmitting it to a web platform for processing and analysis. Our solution permit to edge devices, with a simple and standard implementation of a web socket to communicate with our hub. 
+TinyCI (Tiny Communication Infrastructure) Hub is middleware hub for IoT is a transformative solution that bridges the gap between IoT devices and web platforms. By efficiently collecting data from sensors on IoT devices and transmitting it to a web platform for processing and analysis. Our solution permit to edge devices, with a simple and standard implementation of a web socket to communicate with our hub. 
 
 ## Requirements
 
